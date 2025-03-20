@@ -16,7 +16,7 @@ SPRINT_ACTIONS = ["sprint", "none"]
 HORIZONTAL_LOOK_ACTIONS = ["left", "right", "none"]
 VERTICAL_LOOK_ACTIONS = ["up", "down", "none"]
 
-input_size = 3
+input_size = 41
 hm_size = len(HORIZONTAL_MOVEMENT_ACTIONS)
 vm_size = len(VERTICAL_MOVEMENT_ACTIONS)
 jump_size = len(JUMP_ACTIONS)
@@ -25,8 +25,20 @@ hl_size = len(HORIZONTAL_LOOK_ACTIONS)
 vl_size = len(VERTICAL_LOOK_ACTIONS)
 agent = DQNAgent(input_size, hm_size, vm_size, jump_size, sprint_size, hl_size, vl_size)
 
+BLOCKS = {"Air":0, "Melon":1, "Grass Block":2}
+
+def get_surroundings():
+    surroundings = []
+    for x in range(-1, 3):
+        for y in range(-1, 2):
+            for z in range(-1, 2):
+                block = bot.blockAt(bot.entity.position.offset(x, y, z))
+                surroundings.append(BLOCKS.get(block.displayName))
+    return surroundings
+
 def get_state():
-    return [bot.entity.position.x, bot.entity.position.y, bot.entity.position.z]
+    surroundings = get_surroundings()
+    return [bot.entity.position.x, bot.entity.position.y, bot.entity.position.z, bot.entity.yaw, bot.entity.pitch] + surroundings
 
 def act(hm_action, vm_action, jump_action, sprint_action, hl_action, vl_action):
     #print(hm_action, vm_action, jump_action, sprint_action, hl_action, vl_action)
@@ -42,25 +54,30 @@ def act(hm_action, vm_action, jump_action, sprint_action, hl_action, vl_action):
         time.sleep(0.5)
 
     if hl_action == 1:
-        bot.look(10, 0, timeout=5000)
+        bot.look(10, 0, timeout=1000)
     elif hl_action == 2:
-        bot.look(-10, 0, timeout=5000)
+        bot.look(-10, 0, timeout=1000)
     if vl_action == 1:
-        bot.look(0, 2, timeout=5000)
+        bot.look(0, 2, timeout=1000)
     elif vl_action == 2:
-        bot.look(0, -2, timeout=5000)
+        bot.look(0, -2, timeout=1000)
         
     bot.clearControlStates()
     
         
 def reward_calc(previous_state, new_state):
     reward = 0
-    movement_x = new_state[0] - previous_state[0]
-    movement_z = abs(new_state[2] - previous_state[2]) 
-    reward += movement_x * 10  
-    reward -= movement_z * 5
+    movement_x = round(new_state[0] - previous_state[0])
+    movement_z = round(abs(new_state[2] - previous_state[2])) 
+    reward += movement_x * 20  
+    reward -= movement_z * 15
     if movement_x == 0:
         reward -= 10
+    if new_state[1] <= 18:
+        reward -= 30
+        bot.chat("/tp bot 0 20 0")
+    if new_state[15] == 2:
+        reward += 5
     return reward
 
 def main():
